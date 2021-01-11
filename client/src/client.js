@@ -35,7 +35,7 @@ const resolve_clicked_piece = (x, y) =>
     }
 };
 
-const create_click_func = (canvas,game_board,board_drawer) =>
+const create_click_func = (canvas,game_board) =>
 {
     const on_click = (e) =>
     {
@@ -46,11 +46,12 @@ const create_click_func = (canvas,game_board,board_drawer) =>
 
         if (piece_exists)
         {
+            game_board.redraw()
             console.log(`${piece_x}, ${piece_y}`);
             console.log(game_board.board[piece_y][piece_x]['owner'])
-            if (game_board.board[piece_y][piece_x]['owner'] == 1 || game_board.board[piece_y][piece_x]['owner'] == 0)
+            if (game_board.board[piece_y][piece_x]['owner'] == 1)
             {
-                let moves = game_board.get_allowed_moves(piece_x,piece_y)
+                game_board.highlight_moves(piece_x,piece_y)
             }
         }
         // sock.emit('turn', getCellCoordinates(x, y));
@@ -76,9 +77,13 @@ class BoardDrawer
     {
         this.ctx.fillStyle = cell_color;
         this.ctx.fillRect(x * this.cell_size + this.border_size, y * this.cell_size + this.border_size, this.shading_size, this.shading_size);
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = "60px Arial";
-        this.ctx.fillText(number, x * this.cell_size + 27, y * this.cell_size + this.cell_size - 13);
+        if (number != 0)
+        {
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = "60px Arial";
+            this.ctx.fillText(number, x * this.cell_size + 27, y * this.cell_size + this.cell_size - 13);
+        }
+
     }
 
     draw_background(width,height)
@@ -101,7 +106,7 @@ class BoardDrawer
         }
     }
 
-    draw_board(game_board, going_first)
+    draw_board(game_board)
     {
         let board = game_board.board;
         this.draw_background(game_board.width,game_board.height);
@@ -111,7 +116,7 @@ class BoardDrawer
             {
                 if (board[y][x]['owner'] != -1)
                 {
-                    if (going_first)
+                    if (game_board.going_first)
                     {
                         if (board[y][x]['owner'] == 1)
                         {
@@ -136,9 +141,47 @@ class BoardDrawer
         }
     }
 
-    highlight_moves(moves, game_board)
+    highlight_moves(game_board,positions)
     {
+        console.log('')
+        let board = game_board.board
+        for (const position of positions)
+        {
+            let square = board[position[1]][position[0]]
 
+            if (game_board.going_first == 1)
+            {
+                console.log(`Square owner: ${square['owner']}`)
+                switch (square['owner'])
+                {
+                    case 1:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightred');
+                        break;
+                    case 2:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightgreen');
+                        break;
+                    case -1:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightblue');
+                        break;
+                }
+
+            } else
+            {
+                switch (square['owner'])
+                {
+                    case 1:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightgreen');
+                        break;
+                    case 2:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightred');
+                        break;
+                    case -1:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightblue');
+                        break;
+                }
+            }
+            
+        }
 
     }
 
@@ -150,16 +193,22 @@ class GameBoard
     player_layout = [[1, 2, 1, 3, 2, 1], [3, 4, 2, 5, 4, 3]];
     opponent_layout = [[3, 4, 5, 2, 4, 3], [1, 2, 3, 1, 2, 1]];
 
-    constructor(board_width, board_height)
+    constructor(board_width, board_height,board_drawer)
     {
         this.width = board_width;
         this.height = board_height;
         this.board = [];
-        this.reset_board();
+        this.board_drawer = board_drawer;
     }
 
-    reset_board()
+    setup_board(going_first)
     {
+        this.reset_board(going_first)
+    }
+
+    reset_board(going_first)
+    {
+        this.set_going_first(going_first)
         this.board = [];
         for (let y = 0; y < this.height; y++)
         {
@@ -178,11 +227,18 @@ class GameBoard
                 }
             }
         }
+        this.board_drawer.draw_board(this,this.going_first)
+    }
+
+    set_going_first(value)
+    {
+        //1 if player is going first, 0 if opponent is going first
+        this.going_first = value
     }
 
     is_in_bounds(x, y)
     {
-        return (x < 0 || y < 0 || x >= board_width || y >= board_height);
+        return !(x < 0 || y < 0 || x >= board_width || y >= board_height);
     }
 
     get_allowed_moves(x, y)
@@ -196,12 +252,14 @@ class GameBoard
         //reverses direction based on piece owner
         let direction_modifier = ((this.board[y][x]['owner'] == 1) ? -1 : 1);
         let positions = [];
+
         switch (piece_no)
         {
             case 0:
                 break;
 
             case 1:
+
                 const adjustment = [[0, -1], [0, 1], [0, 2]];
                 for (const offset of adjustment)
                 {
@@ -217,6 +275,17 @@ class GameBoard
         return positions;
     }
 
+    highlight_moves(x, y)
+    {
+        // console.log('Made it to line 274')
+        let moves = this.get_allowed_moves(x, y);
+        this.board_drawer.highlight_moves(this,moves);
+    }
+
+    redraw()
+    {
+        this.board_drawer.draw_board(this)
+    }
 
 }
 
@@ -250,10 +319,11 @@ class GameBoard
     // let board = create_board();
     // draw_background();
     // draw_board(board, 1)
-    let board = new GameBoard(board_width,board_height)
     let board_drawer = new BoardDrawer(canvas,cell_size,shading_size)
-    board_drawer.draw_board(board,1)
-    const {on_click} = create_click_func(canvas,board,board_drawer)
+    let board = new GameBoard(board_width,board_height,board_drawer)
+    board.setup_board(1)
+
+    const {on_click} = create_click_func(canvas,board)
     canvas.addEventListener('click', on_click);
 
 })();
