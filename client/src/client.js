@@ -1,3 +1,6 @@
+import BoardDrawer from "./BoardDrawer.mjs";
+import GameBoard from "./GameBoard.mjs";
+
 const board_width = 6;
 const board_height = 8;
 const cell_size = 80;
@@ -46,13 +49,30 @@ const create_click_func = (canvas,game_board) =>
 
         if (piece_exists)
         {
-            game_board.redraw()
             console.log(`${piece_x}, ${piece_y}`);
             console.log(game_board.board[piece_y][piece_x]['owner'])
-            if (game_board.board[piece_y][piece_x]['owner'] == 1)
+            if (game_board.piece_selected && game_board.in_highlighted_moves(piece_x,piece_y))
             {
-                game_board.highlight_moves(piece_x,piece_y)
+                console.log(game_board.in_highlighted_moves(piece_x,piece_y))
+                game_board.move_piece(piece_x,piece_y)
+                game_board.redraw()
             }
+            else
+            {
+                if (game_board.board[piece_y][piece_x]['owner'] == 1)
+                {
+                    game_board.redraw()
+
+                    game_board.select_piece(piece_x,piece_y)
+
+                }
+                else
+                {
+                    game_board.deselect()
+                    game_board.redraw()
+                }
+            }
+
         }
         // sock.emit('turn', getCellCoordinates(x, y));
     };
@@ -60,275 +80,9 @@ const create_click_func = (canvas,game_board) =>
     return {on_click}
 }
 
-class BoardDrawer
-{
-
-    constructor(canvas, cell_size, shading_size)
-    {
-        this.canvas = canvas
-        this.ctx = canvas.getContext('2d');
-        this.cell_size = cell_size;
-        this.shading_size = shading_size;
-        this.border_size = this.cell_size - this.shading_size;
-
-    }
-
-    draw_piece(x, y, number, cell_color)
-    {
-        this.ctx.fillStyle = cell_color;
-        this.ctx.fillRect(x * this.cell_size + this.border_size, y * this.cell_size + this.border_size, this.shading_size, this.shading_size);
-        if (number != 0)
-        {
-            this.ctx.fillStyle = 'white';
-            this.ctx.font = "60px Arial";
-            this.ctx.fillText(number, x * this.cell_size + 27, y * this.cell_size + this.cell_size - 13);
-        }
-
-    }
-
-    draw_background(width,height)
-    {
-        this.ctx.fillStyle = 'black';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        for (let y = 0; y < height; y++)
-        {
-            for (let x = 0; x < width; x++)
-            {
-                if (((y * width + x + y) % 2) == 0)
-                {
-                    this.ctx.fillStyle = 'darkgrey';
-                } else
-                {
-                    this.ctx.fillStyle = 'grey';
-                }
-                this.ctx.fillRect(x * this.cell_size + this.border_size, y * this.cell_size + this.border_size, this.shading_size, this.shading_size);
-            }
-        }
-    }
-
-    draw_board(game_board)
-    {
-        let board = game_board.board;
-        this.draw_background(game_board.width,game_board.height);
-        for (let y = 0; y < game_board.height; y++)
-        {
-            for (let x = 0; x < game_board.width; x++)
-            {
-                if (board[y][x]['owner'] != -1)
-                {
-                    if (game_board.going_first)
-                    {
-                        if (board[y][x]['owner'] == 1)
-                        {
-                            this.draw_piece(x, y, board[y][x]['piece_no'], 'red');
-                        } else
-                        {
-                            this.draw_piece(x, y, board[y][x]['piece_no'], 'green');
-                        }
-                    } else
-                    {
-                        if (board[y][x]['owner'] == 1)
-                        {
-                            this.draw_piece(x, y, board[y][x]['piece_no'], 'green');
-                        } else
-                        {
-                            this.draw_piece(x, y, board[y][x]['piece_no'], 'red');
-                        }
-                    }
-
-                }
-            }
-        }
-    }
-
-    highlight_moves(game_board,positions)
-    {
-        console.log('')
-        let board = game_board.board
-        for (const position of positions)
-        {
-            let square = board[position[1]][position[0]]
-
-            if (game_board.going_first == 1)
-            {
-                console.log(`Square owner: ${square['owner']}`)
-                switch (square['owner'])
-                {
-                    case 1:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightred');
-                        break;
-                    case 2:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightgreen');
-                        break;
-                    case -1:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightblue');
-                        break;
-                }
-
-            } else
-            {
-                switch (square['owner'])
-                {
-                    case 1:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightgreen');
-                        break;
-                    case 2:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightred');
-                        break;
-                    case -1:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightblue');
-                        break;
-                }
-            }
-            
-        }
-
-    }
-
-}
-
-
-class GameBoard
-{
-    player_layout = [[1, 2, 1, 3, 2, 1], [3, 4, 2, 5, 4, 3]];
-    opponent_layout = [[3, 4, 5, 2, 4, 3], [1, 2, 3, 1, 2, 1]];
-
-    constructor(board_width, board_height,board_drawer)
-    {
-        this.width = board_width;
-        this.height = board_height;
-        this.board = [];
-        this.board_drawer = board_drawer;
-        this.selected_piece_x = -1
-        this.selected_piece_y = -1
-        this.piece_selected = 0
-    }
-
-    setup_board(going_first)
-    {
-        this.reset_board(going_first)
-    }
-
-    reset_board(going_first)
-    {
-        this.set_going_first(going_first)
-        this.board = [];
-        for (let y = 0; y < this.height; y++)
-        {
-            this.board[y] = []
-            for (let x = 0; x < this.width; x++)
-            {
-                if (y < this.opponent_layout.length)
-                {
-                    this.board[y][x] = {piece_no: this.opponent_layout[y][x], owner: 0};
-                } else if (y >= this.height - this.player_layout.length)
-                {
-                    this.board[y][x] = {piece_no: this.player_layout[y - (this.height - this.player_layout.length)][x], owner: 1};
-                } else
-                {
-                    this.board[y][x] = {piece_no: 0, owner: -1};
-                }
-            }
-        }
-        this.board_drawer.draw_board(this,this.going_first)
-    }
-
-    set_going_first(value)
-    {
-        //1 if player is going first, 0 if opponent is going first
-        this.going_first = value
-    }
-
-    is_in_bounds(x, y)
-    {
-        return !(x < 0 || y < 0 || x >= board_width || y >= board_height);
-    }
-
-    get_allowed_moves(x, y)
-    {
-        if (this.board[y][x]['owner'] == -1)
-        {
-            throw `Board position ${x},${y} has no owner`;
-        }
-        let piece_no = this.board[y][x]['piece_no'];
-        let owner = this.board[y][x]['owner'];
-        //reverses direction based on piece owner
-        let direction_modifier = ((this.board[y][x]['owner'] == 1) ? -1 : 1);
-        let positions = [];
-
-        switch (piece_no)
-        {
-            case 0:
-                break;
-
-            case 1:
-
-                const adjustment = [[0, -1], [0, 1], [0, 2]];
-                for (const offset of adjustment)
-                {
-                    let new_x = x + offset[0] * direction_modifier;
-                    let new_y = y + offset[1] * direction_modifier;
-                    if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
-                    {
-                        positions.push([new_x, new_y]);
-                    }
-                }
-                break;
-        }
-        return positions;
-    }
-
-    select_piece(x,y)
-    {
-        this.piece_selected = 1;
-        this.selected_piece_x = x;
-        this.selected_piece_y = y;
-    }
-
-    deselect()
-    {
-        this.piece_selected = 0;
-        this.selected_piece_x = -1;
-        this.selected_piece_y = -1;
-    }
-
-    highlight_moves(x, y)
-    {
-        // console.log('Made it to line 274')
-        let moves = this.get_allowed_moves(x, y);
-        this.board_drawer.highlight_moves(this,moves);
-    }
-
-    redraw()
-    {
-        this.board_drawer.draw_board(this)
-    }
-
-}
-
-// // contains board drawing/logic
-// const get_board = (canvas) =>
-// {
-//
-//
-//       const
-//
-//     // highlight color 'palegoldenrod'
-//     const highlight_moves = (x, y, board) =>
-//     {
-//
-//
-//     }
-//
-//
-//     return {create_board, draw_background, draw_piece, draw_board};
-// };
-
 
 (() =>
 {
-
-
     const sock = io();
     sock.on('msg', console.log)
     const canvas = document.querySelector('canvas');
