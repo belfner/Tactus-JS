@@ -75,10 +75,6 @@ export default class BoardDrawer
                     }
 
                 }
-                if (y == 5)
-                {
-                    let h = 1;
-                }
             }
         }
     }
@@ -111,11 +107,11 @@ export default class BoardDrawer
             {
                 switch (square['owner'])
                 {
-                    case 1:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightgreen');
+                    case 0:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'MediumSeaGreen');
                         break;
-                    case 2:
-                        this.draw_piece(position[0],position[1],square['piece_no'], 'lightred');
+                    case 1:
+                        this.draw_piece(position[0],position[1],square['piece_no'], 'IndianRed');
                         break;
                     case -1:
                         this.draw_piece(position[0],position[1],square['piece_no'], 'lightblue');

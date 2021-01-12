@@ -53,13 +53,17 @@ const create_click_func = (canvas,game_board) =>
             console.log(game_board.board[piece_y][piece_x]['owner'])
             if (game_board.piece_selected && game_board.in_highlighted_moves(piece_x,piece_y))
             {
-                console.log(game_board.in_highlighted_moves(piece_x,piece_y))
                 game_board.move_piece(piece_x,piece_y)
                 game_board.redraw()
+                if (game_board.game_over)
+                {
+                    console.log(`Game over. The winner is ${((game_board.winner === 0) ? 'Red' : 'Green')}`)
+                }
+
             }
             else
             {
-                if (game_board.board[piece_y][piece_x]['owner'] == 1)
+                if (game_board.board[piece_y][piece_x]['owner'] != -1)
                 {
                     game_board.redraw()
 
@@ -92,7 +96,7 @@ const create_click_func = (canvas,game_board) =>
     // draw_board(board, 1)
     let board_drawer = new BoardDrawer(canvas,cell_size,shading_size)
     let board = new GameBoard(board_width,board_height,board_drawer)
-    board.setup_board(1)
+    board.setup_board(0)
 
     const {on_click} = create_click_func(canvas,board)
     canvas.addEventListener('click', on_click);

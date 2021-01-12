@@ -15,14 +15,18 @@ export default class GameBoard
         this.selected_piece_y = -1;
         this.piece_selected = 0;
         this.moves = [];
+        this.going_first = -1;
+        this.players_turn = -1;
+        this.game_over = Boolean(0);
+        this.winner = -1;
     }
 
-    compare_list(a,b)
+    compare_list(a, b)
     {
         return (JSON.stringify(a) === JSON.stringify(b));
     }
 
-    in_list(list,x,compare_func = null)
+    in_list(list, x, compare_func = null)
     {
         let match;
         if (compare_func == null)
@@ -31,16 +35,15 @@ export default class GameBoard
             {
                 if (x === value)
                 {
-                   return Boolean(1);
+                    return Boolean(1);
                 }
             }
             return Boolean(0);
-        }
-        else
+        } else
         {
             for (const value of list)
             {
-                if (compare_func(x,value))
+                if (compare_func(x, value))
                 {
                     return Boolean(1);
                 }
@@ -56,11 +59,12 @@ export default class GameBoard
 
     reset_board(going_first)
     {
-        this.set_going_first(going_first)
+        this.going_first = going_first;
+        this.players_turn = going_first;
         this.board = [];
         for (let y = 0; y < this.height; y++)
         {
-            this.board[y] = []
+            this.board[y] = [];
             for (let x = 0; x < this.width; x++)
             {
                 if (y < this.opponent_layout.length)
@@ -75,14 +79,9 @@ export default class GameBoard
                 }
             }
         }
-        this.board_drawer.draw_board(this,this.going_first)
+        this.board_drawer.draw_board(this, this.going_first);
     }
 
-    set_going_first(value)
-    {
-        //1 if player is going first, 0 if opponent is going first
-        this.going_first = value
-    }
 
     is_in_bounds(x, y)
     {
@@ -97,8 +96,10 @@ export default class GameBoard
         }
         let piece_no = this.board[y][x]['piece_no'];
         let owner = this.board[y][x]['owner'];
-        //reverses direction based on piece owner
+
+        //reverses direction based on the piece's owner
         let direction_modifier = ((this.board[y][x]['owner'] == 1) ? -1 : 1);
+
         let positions = [];
 
         switch (piece_no)
@@ -107,28 +108,296 @@ export default class GameBoard
                 break;
 
             case 1:
-
-                const adjustment = [[0, -1], [0, 1], [0, 2]];
-                for (const offset of adjustment)
-                {
-                    let new_x = x + offset[0] * direction_modifier;
-                    let new_y = y + offset[1] * direction_modifier;
-                    if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
-                    {
-                        positions.push([new_x, new_y]);
-                    }
-                }
+                positions = this.get_1_moves(x, y, owner, direction_modifier);
                 break;
+            case 2:
+                positions = this.get_2_moves(x, y, owner, direction_modifier);
+                break;
+            case 3:
+                positions = this.get_3_moves(x, y, owner, direction_modifier);
+                break;
+            case 4:
+                positions = this.get_4_moves(x, y, owner, direction_modifier);
+                break;
+            case 5:
+                positions = this.get_5_moves(x, y, owner, direction_modifier);
+                break;
+            case 6:
+                positions = this.get_6_moves(x, y, owner, direction_modifier)
         }
         return positions;
     }
 
-    select_piece(x,y)
+    get_1_moves(x, y, owner, direction_modifier)
     {
+        let adjustment = [[0, -1], [0, 1], [0, 2]];
+        let positions = [];
+        let new_x, new_y;
+
+        new_x = x + adjustment[0][0] * direction_modifier;
+        new_y = new_y = y + adjustment[0][1] * direction_modifier;
+        if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            positions.push([new_x, new_y]);
+        }
+
+        new_x = x + adjustment[1][0] * direction_modifier;
+        new_y = new_y = y + adjustment[1][1] * direction_modifier;
+        if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            positions.push([new_x, new_y]);
+        }
+
+        //prevents piece from jumping over other pieces
+        if (this.board[new_y][new_x]['owner'] != -1)
+        {
+            return positions;
+        }
+
+        new_x = x + adjustment[2][0] * direction_modifier;
+        new_y = new_y = y + adjustment[2][1] * direction_modifier;
+        if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            positions.push([new_x, new_y]);
+        }
+
+        return positions
+    }
+
+    get_2_moves(x, y, owner, direction_modifier)
+    {
+        let adjustment = [[0, -1], [1, 1], [-1, 1]];
+
+        let positions = [];
+        let new_x, new_y;
+        for (const offset of adjustment)
+        {
+            new_x = x + offset[0] * direction_modifier;
+            new_y = y + offset[1] * direction_modifier;
+            if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+            {
+                positions.push([new_x, new_y]);
+            }
+        }
+        return positions;
+    }
+
+    get_3_moves(x, y, owner, direction_modifier)
+    {
+        let adjustment = [[1, 1], [0, 1], [-1, 1], [1, 0], [-1, 0], [1, -1], [0, -1], [-1, -1]];
+
+        let positions = [];
+        let new_x, new_y;
+
+        for (const offset of adjustment)
+        {
+            new_x = x + offset[0] * direction_modifier;
+            new_y = y + offset[1] * direction_modifier;
+            if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+            {
+                positions.push([new_x, new_y]);
+            }
+        }
+        return positions
+    }
+
+    get_4_moves(x, y, owner, direction_modifier)
+    {
+        let positions;
+        positions = [];
+
+        let offset_x, offset_y, new_x, new_y, was_not_empty;
+
+        offset_x = 0;
+        offset_y = 1;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            //break if piece is blocking path
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_y += 1;
+            new_y = y + offset_y * direction_modifier;
+
+        }
+
+        offset_x = 0;
+        offset_y = -1;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_y -= 1;
+            new_y = y + offset_y * direction_modifier;
+
+        }
+
+        offset_x = 1;
+        offset_y = 0;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_x -= 1;
+            new_x = x + offset_x * direction_modifier;
+        }
+
+        offset_x = -1;
+        offset_y = 0;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_x -= 1;
+            new_x = x + offset_x * direction_modifier;
+        }
+
+        return positions;
+    }
+
+    get_5_moves(x, y, owner, direction_modifier)
+    {
+        let positions;
+        positions = [];
+
+        let offset_x, offset_y, new_x, new_y, was_not_empty;
+
+        offset_x = 1;
+        offset_y = 1;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            //break if piece is blocking path
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_x += 1;
+            offset_y += 1;
+            new_x = x + offset_x * direction_modifier;
+            new_y = y + offset_y * direction_modifier;
+
+        }
+
+        offset_x = 1;
+        offset_y = -1;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_x += 1;
+            offset_y -= 1;
+            new_x = x + offset_x * direction_modifier;
+            new_y = y + offset_y * direction_modifier;
+
+        }
+
+        offset_x = -1;
+        offset_y = 1;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_x -= 1;
+            offset_y += 1;
+            new_x = x + offset_x * direction_modifier;
+            new_y = y + offset_y * direction_modifier;
+        }
+
+        offset_x = -1;
+        offset_y = -1;
+        new_x = x + offset_x * direction_modifier;
+        new_y = y + offset_y * direction_modifier;
+        while (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+        {
+            if (this.board[new_y][new_x]['owner'] != -1 && was_not_empty)
+            {
+                break;
+            }
+
+            positions.push([new_x, new_y]);
+            was_not_empty = this.board[new_y][new_x]['owner'] != -1
+            offset_x -= 1;
+            offset_y -= 1;
+            new_x = x + offset_x * direction_modifier;
+            new_y = y + offset_y * direction_modifier;
+        }
+
+        return positions;
+    }
+
+    get_6_moves(x, y, owner, direction_modifier)
+    {
+        let adjustment = [[0, 1], [1, -1], [0, -1], [-1, -1], [1, -2], [0, -2], [-1, -2]];
+
+        let positions = [];
+        let new_x, new_y;
+
+        for (const offset of adjustment)
+        {
+            new_x = x + offset[0] * direction_modifier;
+            new_y = y + offset[1] * direction_modifier;
+            if (this.is_in_bounds(new_x, new_y) && this.board[new_y][new_x]['owner'] != owner)
+            {
+                positions.push([new_x, new_y]);
+            }
+        }
+        return positions
+    }
+
+    select_piece(x, y)
+    {
+        if (this.board[y][x]['owner'] != this.players_turn)
+        {
+            return;
+        }
         this.piece_selected = 1;
         this.selected_piece_x = x;
         this.selected_piece_y = y;
-        this.highlight_moves(x,y);
+        this.highlight_moves(x, y);
     }
 
     deselect()
@@ -141,33 +410,41 @@ export default class GameBoard
 
     highlight_moves(x, y)
     {
-        // console.log('Made it to line 274')
         this.moves = this.get_allowed_moves(x, y);
-        this.board_drawer.highlight_moves(this,this.moves);
+        this.board_drawer.highlight_moves(this, this.moves);
     }
 
-    move_piece(to_x,to_y)
+    move_piece(to_x, to_y)
     {
+        if (this.selected_piece_y == -1 || this.selected_piece_x == -1)
+        {
+            throw 'No piece is selected';
+        }
         let piece_num = this.board[to_y][to_x]['piece_no'];
         this.board[to_y][to_x] = this.board[this.selected_piece_y][this.selected_piece_x];
         this.board[this.selected_piece_y][this.selected_piece_x] = {piece_no: 0, owner: -1};
-        console.log(`${this.board[to_y][to_x]['piece_no']}`)
+        console.log(`${this.board[to_y][to_x]['piece_no']}`);
         if (piece_num != 0)
         {
-            this.board[to_y][to_x]['piece_no'] +=  1;
+            this.board[to_y][to_x]['piece_no'] += 1;
         }
-        this.deselect()
-
+        this.game_over = (this.board[to_y][to_x]['piece_no'] === 7);
+        if (this.game_over)
+        {
+            this.winner = this.board[to_y][to_x]['owner'];
+        }
+        this.deselect();
+        this.players_turn = ((this.players_turn == 1) ? 0 : 1);
     }
 
-    in_highlighted_moves(x,y)
+    in_highlighted_moves(x, y)
     {
-        return this.in_list(this.moves,[x,y],this.compare_list)
+        return this.in_list(this.moves, [x, y], this.compare_list);
     }
 
     redraw()
     {
-        this.board_drawer.draw_board(this)
+        this.board_drawer.draw_board(this);
     }
 
 }
