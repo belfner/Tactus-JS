@@ -199,6 +199,9 @@ class GameBoard
         this.height = board_height;
         this.board = [];
         this.board_drawer = board_drawer;
+        this.selected_piece_x = -1
+        this.selected_piece_y = -1
+        this.piece_selected = 0
     }
 
     setup_board(going_first)
@@ -273,6 +276,20 @@ class GameBoard
                 break;
         }
         return positions;
+    }
+
+    select_piece(x,y)
+    {
+        this.piece_selected = 1;
+        this.selected_piece_x = x;
+        this.selected_piece_y = y;
+    }
+
+    deselect()
+    {
+        this.piece_selected = 0;
+        this.selected_piece_x = -1;
+        this.selected_piece_y = -1;
     }
 
     highlight_moves(x, y)
